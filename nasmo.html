@@ -20,7 +20,7 @@
         .player-wrap div{
             margin:10px 10px 0px 10px;
         }
-        .canvas-wrap{
+        #canvas-wrap{
             position:relative;
         }
         .control-div{
@@ -61,14 +61,60 @@
         #yellow_btn{ background-color:yellow; }
         #blue_btn{ background-color:blue; }
         #green_btn{ background-color:green; }
+
+        #seeker-div{
+            position:absolute;
+            bottom:0px;
+            width:100%;
+            height:20px;
+            background-color:#323232;
+            opacity: 0.5;
+            margin:0px;
+        }
+        #seeker{
+            width:100%;
+            height:100%;
+            background-color:deepskyblue;
+            opacity:1;
+            margin:0px;
+            transform-origin: left;
+            position:absolute;
+            bottom:0px;
+        }
+
+        #thumbnail-div{
+            width:100%;
+            position:absolute;
+            bottom:20px;
+            height:50px;
+            margin:0px;
+            padding:10px;
+        }
+        .thumbnail{
+            display:inline-block;
+            width:16%;
+            height: 80%;
+            opacity: 0.0;
+            /*margin: 10px 8px 30px 8px !important;*/
+            background-color: #323232;
+        }
     </style>
+    <script src="nasmo.js"></script>
+    <script src="canvasVideo.js"></script>
 </head>
 <body>
 <div class="nasmo-wrap">
     <div class="player-wrap">
-        <div class="canvas-wrap">
-            <video id="video_content" webkit-playsinline="true" playsinline="true"></video>
-            <canvas id="canvas" style="z-index:1;"></canvas>
+        <div id="canvas-wrap">
+            <div id="thumbnail-div">
+                <div class="thumbnail"></div>
+                <div class="thumbnail"></div>
+                <div class="thumbnail"></div>
+                <div class="thumbnail"></div>
+            </div>
+            <div id="seeker-div">
+                <div id="seeker"></div>
+            </div>
         </div>
         <div class="control-div">
             <button id="skip-pre">|<</button>
@@ -86,66 +132,23 @@
         <button class="color_btn" id="blue_btn"></button>
         <button class="color_btn" id="green_btn"></button><br>
         <button id="stroke_size">size = 1</button><br>
-        <button>undo</button><br>
+        <button id="undo">undo</button><br>
         <button id="clear_canvas">clear</button><br>
     </div>
 </div>
 
 <script>
     var p_btn = document.getElementById("play-btn");
-    var vid = document.getElementById("video_content");
-    var canvas = document.getElementById("canvas");
-    var ctx = canvas.getContext("2d");
-
-    var cnt = 0;
+    var video;
+    var canvas;
     var flag = 0;
     var line_width = 1;
     var stroke_style = "black";
 
-    var line = [];
-    var rect = [];
-    var cir = [];
-    var temp_cir = [];
-
-    var startX,startY;
-
-    var nearest = [];
-    var top_ind = 0;
-    var top_type = "";
-    var sel_type = "";
-    var k = 0;
-    var sel_size = [];
-
-    var isDown=false;
-    var w_rate = canvas.width / 40;
-    var h_rate = canvas.height / 40;
-
-    videoContainer = {
-        video : vid,
-        ready : true
-    };
-
-    var url = "http://fms.golfzon.com/mobile/new/2017/03/09/11/55/2070001_20170309115542.mp4";
-    vid.src = url;
-
-    vid.oncanplay = readyToPlayVideo;
-
-    function reOffset(){
-        var screen = canvas.getBoundingClientRect();
-        console.log(screen);
-        offsetX = screen.left;
-        offsetY = screen.top;
-        console.log(offsetX);
-    }
-    var offsetX,offsetY;
-    var mouseX,mouseY;
-
-    reOffset();
-
     /* button event */
-    document.getElementById("skip-pre").addEventListener("click", function(){ skip(-1); });
+    document.getElementById("skip-pre").addEventListener("click", function(){ video.videoSkip(-1)});//vid.videoSkip(-1); });
     document.getElementById("play-btn").addEventListener("click", function(){ play(); });
-    document.getElementById("skip-after").addEventListener("click", function(){ skip(1); });
+    document.getElementById("skip-after").addEventListener("click", function(){ video.videoSkip(1); });
     document.getElementById("speed-btn").addEventListener("click", function(){ speed(); });
     document.getElementById("line").addEventListener("click", function(){ createLine(); });
     document.getElementById("rect").addEventListener("click", function(){ createRect(); });
@@ -163,393 +166,131 @@
     document.getElementById("yellow_btn").addEventListener("click", function(){stroke_style = "yellow";});
     document.getElementById("blue_btn").addEventListener("click", function(){stroke_style = "blue";});
     document.getElementById("green_btn").addEventListener("click", function(){stroke_style = "green";});
+    document.getElementById("clear_canvas").addEventListener("click", function(){ canvas.clearCanvas(); });
+    document.getElementById("undo").addEventListener("click", function(){ canvas.undo(); });
 
-    document.getElementById("clear_canvas").addEventListener("click", function(){ clearCanvas(); });
 
+    video = new videoSketch({
+        position:'canvas-wrap',
+        url:"http://fms.golfzon.com/mobile/new/2017/03/09/11/55/2070001_20170309115542.mp4"
+    });
 
-    function readyToPlayVideo(event){
-        videoContainer.ready = true;
-        if(videoContainer !== undefined && videoContainer.ready){
-            if(flag === 0){
-                canvas.width = videoContainer.video.videoWidth;
-                canvas.height = videoContainer.video.videoHeight;
-            }
+    video.vid.oncanplay = function(){
+        if(flag === 0){
+            canvas = new PolySketch({
+                position:'canvas-wrap',
+                width:video.vid.videoWidth,
+                height:video.vid.videoHeight,
+                styleText:'position:absolute; z-index:1; top:0px; left:0px;'});
         }
+        if(video.videoCanvas === true){
+            video.updateCanvas();
+        }
+    };
+    video.vid.onplay = function(){
+        video.updateCanvas();
     }
-    function clearCanvas(){
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        line = [];
-        rect = [];
-        cir = [];
-    }
+
+
+    //    video.vid.oncanplay = function(){
+    //        if(flag === 0){
+    //            canvas = new PolySketch({
+    //                position:'canvas-wrap',
+    //                width:video.vid.videoWidth,
+    //                height:video.vid.videoHeight,
+    //                styleText:'position:absolute; z-index:1; top:0px; left:0px;'});
+    //        }
+    //    };
 
     function play(){
-        if(vid.paused){
-            vid.play();
+        if(video.videoPlay()){
             p_btn.textContent = "PAUSE";
         }else{
-            vid.pause();
             p_btn.textContent = "PLAY";
         }
     }
 
     function speed(){
-        if(vid.playbackRate < 0.25){
-            vid.playbackRate = 1;
+        if(video.videoSpeed()){
             document.getElementById("speed-btn").textContent = 1 + " x";
         }else{
-            vid.playbackRate /= 2;
-            document.getElementById("speed-btn").textContent = "1/" + (1 / vid.playbackRate) + " x";
+            document.getElementById("speed-btn").textContent = "1/" + (1 / video.vid.playbackRate) + " x";
         }
     }
 
-    function skip(seconds){
-        vid.currentTime += seconds;
-    }
-
-    vid.onended = function() {
+    video.vid.onended = function() {
         flag++;
         if(flag > 4){
             p_btn.textContent = "PLAY";
             flag = 1;
             return;
         }
-        vid.play();
+        video.vid.play();
     };
 
-    canvas.addEventListener("mousedown", listener, true);
-    canvas.addEventListener("mousemove", listener, true);
-    canvas.addEventListener("mouseup", listener, true);
-    canvas.addEventListener("mouseout", listener, true);
-
-    
-    function listener(event){
-        switch(event.type){
-            case "mousedown":
-                console.log(offsetX);
-                startX = parseInt(event.clientX-offsetX);
-                startY = parseInt(event.clientY-offsetY);
-                near(startX, startY, true);
-                break;
-            case "mousemove":
-                if(!isDown){
-                    startX = parseInt(event.clientX-offsetX);
-                    startY = parseInt(event.clientY-offsetY);
-                    near(startX, startY, false);
-                }else{
-                    draw();
-                }
-                break;
-            case "mouseout":
-                mouseUpOut(event);
-                break;
-            case "mouseup":
-                mouseUpOut(event);
-                break;
-        }
-    }
-
-    function near(mx, my, d_check){
-        top_type = "";
-        top_ind = 0;
-        var i;
-        for(i = 0; i < line.length; i++){
-            ctx.save();
-            var dx = line[i].x1 - line[i].x0;
-            var dy = line[i].y1 - line[i].y0;
-
-            var slope = - Math.atan2(dx, dy);                               //기울기
-            var rotation = Math.sqrt(dx * dx + dy * dy);
-
-            ctx.beginPath();
-            ctx.translate(line[i].x0 - (w_rate / 2), line[i].y0 - (h_rate / 2));
-            ctx.rotate(slope);
-            ctx.rect(0, 0, w_rate, rotation);
-            ctx.restore();
-
-            if(ctx.isPointInPath(mx, my) == true){
-                nearest.push({ind:line[i].ind, type:"line", t_ind:i});
-            }
-        }
-
-        for(i = 0; i < rect.length; i++){
-            if(!(mx < rect[i].x0 - w_rate ||
-                mx > rect[i].x0 + rect[i].x1 + w_rate ||
-                my < rect[i].y0 - h_rate ||
-                my > rect[i].y0 + rect[i].y1 + h_rate)
-            ){
-                nearest.push({ind:rect[i].ind, type:"rect", t_ind:i});
-            }
-        }
-
-        for(i = 0; i < cir.length; i++){
-            ctx.save();
-            ctx.beginPath();
-            ctx.rect(cir[i].x0 - cir[i].radius, cir[i].y0 - cir[i].radius, cir[i].radius * 2, cir[i].radius * 2);
-            ctx.restore();
-            if(ctx.isPointInPath(mx,my) == true){
-                nearest.push({ind:cir[i].ind, type:"circle", t_ind:i});
-            }
-        }
-
-        for(i = 0; i < nearest.length; i++){
-            if(nearest[i].ind >= top_ind){
-                top_ind = nearest[i].ind;
-                top_type = nearest[i].type;
-                k = nearest[i].t_ind;
-            }
-        }
-        nearest = [];
-        isDown = d_check;
-
-        if(isDown == true && temp_cir.length > 0){
-            for(i = 1; i < temp_cir.length; i++){
-                ctx.save();
-                ctx.beginPath();
-                ctx.rect(temp_cir[i].x - temp_cir[i].radius, temp_cir[i].y - temp_cir[i].radius,
-                    temp_cir[i].radius * 2, temp_cir[i].radius * 2);
-                ctx.restore();
-                if(ctx.isPointInPath(mx,my) == true){
-                    sel_size.push({ind:k, num:i});
-                }
-            }
-        }
-
-        if(isDown == false && top_type != ""){
-            mouseOver();
-        }else if(isDown == false && top_type == ""){
-            temp_cir = [];
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            drawLine(0);
-            drawRect(0);
-            drawCir(0);
-        }
-    }
 
     function createLine(){
-        line.push({ind:++cnt, x0:160, y0:80, x1:160, y1:160, width:line_width, color:stroke_style});
-        drawLine(1);
+        canvas.createPoly({
+            x0: 160,
+            y0:80,
+            x1:160,
+            y1:160,
+            weight:line_width,
+            color:stroke_style,
+            type:"line"
+        }).draw();
     }
     function createRect(){
-        rect.push({ind:++cnt, x0:120, y0:80, x1:80, y1:80, width:line_width, color:stroke_style});
-        drawRect(1);
+        canvas.createPoly({
+            x0: 120,
+            y0:80,
+            x1:80,
+            y1:80,
+            weight:line_width,
+            color:stroke_style,
+            type:"rect"}).draw();
     }
     function createCir(){
-        cir.push({ind:++cnt, x0:160, y0:120, radius:40, s_angle:0, e_angle:2 * Math.PI, width:line_width, color:stroke_style});
-        drawCir(1);
+        var a = canvas.createPoly({
+            x0: 160,
+            y0:120,
+            radius:40,
+            weight:line_width,
+            color:stroke_style,
+            type:"cir"});
+        a.draw();
     }
 
 
-    function mouseOver(){
-        if(top_type == sel_type) {return ;}
-        else{
-            temp_cir = [];
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            drawLine(0);
-            drawRect(0);
-            drawCir(0);
-        }
-
-        var x, y;
-        var x1,x2,x3,x4;
-        var y1,y2,y3,y4;
-        switch (top_type){
-            case "line": x = line[k].x0;
-                y = line[k].y0;
-                x1 = line[k].x0;
-                y1 = line[k].y0;
-                x2 = line[k].x1;
-                y2 = line[k].y1;
-                break;
-            case "rect": x = rect[k].x0 + (rect[k].x1 / 2);
-                y = rect[k].y0 + (rect[k].y1/ 2);
-                x1 = rect[k].x0;
-                y1 = rect[k].y0;
-                x2 = rect[k].x0 + rect[k].x1;
-                y2 = rect[k].y0;
-                x3 = rect[k].x0;
-                y3 = rect[k].y0 + rect[k].y1;
-                x4 = rect[k].x0 + rect[k].x1;
-                y4 = rect[k].y0 + rect[k].y1;
-                break;
-            case "circle": x = cir[k].x0;
-                y = cir[k].y0;
-                x1 = cir[k].x0 - cir[k].radius;
-                y1 = cir[k].y0 - cir[k].radius;
-                x2 = cir[k].x0 + cir[k].radius;
-                y2 = cir[k].y0 - cir[k].radius;
-                x3 = cir[k].x0 - cir[k].radius;
-                y3 = cir[k].y0 + cir[k].radius;
-                x4 = cir[k].x0 + cir[k].radius;
-                y4 = cir[k].y0 + cir[k].radius;
-
-                ctx.strokeStyle = cir[k].color;
-                ctx.beginPath();
-                ctx.setLineDash([4,2]);
-                ctx.rect(x1, y1, cir[k].radius * 2, cir[k].radius * 2);
-                ctx.stroke();
-                ctx.setLineDash([0,0]);
-                break;
-        }
-        temp_cir.push({x:x, y:y, radius:4});
-        temp_cir.push({x:x1, y:y1, radius:4});
-        temp_cir.push({x:x2, y:y2, radius:4});
-        temp_cir.push({x:x3, y:y3, radius:4});
-        temp_cir.push({x:x4, y:y4, radius:4});
-        for(var i = 0; i < temp_cir.length; i++){
-            ctx.beginPath();
-            ctx.arc(temp_cir[i].x, temp_cir[i].y, temp_cir[i].radius, 0, 2 * Math.PI);
-            ctx.fillStyle = "#dddddd";
-            ctx.fill();
-        }
+    function af(){
+        console.log("Agg");
     }
 
-    function move(){
-        mouseX = parseInt(event.clientX-offsetX);
-        mouseY = parseInt(event.clientY-offsetY);
-//        console.log(startX + " - " + mouseX);
-        var dx = mouseX - startX;
-        var dy = mouseY - startY;
-        startX = mouseX;
-        startY = mouseY;
 
-        function casePlus(){
-            cir[k].x0 += dx;
-            cir[k].y0 += dy;
-            cir[k].radius += Math.sqrt(dx * dx + dy * dy);
-        }
-        function caseMinus(){
-            cir[k].x0 += dx;
-            cir[k].y0 += dy;
-            cir[k].radius -= Math.sqrt(dx * dx + dy * dy);
-        }
-
-        switch (top_type){
-            case "line":
-                if(sel_size.length > 0){
-                    if(sel_size[0].num == 1){
-                        line[k].x0 = mouseX;
-                        line[k].y0 = mouseY;
-                    }else if(sel_size[0].num == 2){
-                        line[k].x1 = mouseX;
-                        line[k].y1 = mouseY;
-                    }
-                }else{
-                    line[k].x0 += dx;
-                    line[k].y0 += dy;
-                    line[k].x1 += dx;
-                    line[k].y1 += dy;
-                }
-                break;
-            case "rect":
-                if(sel_size.length > 0){
-                    if(sel_size[0].num == 1){
-                        rect[k].x0 = mouseX;
-                        rect[k].y0 = mouseY;
-                        rect[k].x1 -= dx;
-                        rect[k].y1 -= dy;
-                    }else if(sel_size[0].num == 2){
-                        rect[k].y0 = mouseY;
-                        rect[k].x1 += dx;
-                        rect[k].y1 -= dy;
-                    }else if(sel_size[0].num == 3){
-                        rect[k].x0 = mouseX;
-                        rect[k].x1 -= dx;
-                        rect[k].y1 += dy;
-                    }else if(sel_size[0].num == 4){
-                        rect[k].x1 += dx;
-                        rect[k].y1 += dy;
-                    }
-                }else{
-                    rect[k].x0 += dx;
-                    rect[k].y0 += dy;
-                }
-                break;
-            case "circle":
-                if(sel_size.length > 0){
-                    if(sel_size[0].num == 1) {
-                        if(dx < 0 && dy < 0){
-                            casePlus();
-                        }else if(dx > 0 && dy > 0){
-                            caseMinus();
-                        }
-                    }else if(sel_size[0].num == 2){
-                        if(dx > 0 && dy < 0){
-                            casePlus();
-                        }else if(dx < 0 && dy > 0){
-                            caseMinus();
-                        }
-                    }else if(sel_size[0].num == 3){
-                        if(dx < 0 && dy > 0){
-                            casePlus();
-                        }else if(dx > 0 && dy < 0){
-                            caseMinus();
-                        }
-                    }else if(sel_size[0].num == 4){
-                        if(dx > 0 && dy > 0){
-                            casePlus();
-                        }else if(dx < 0 && dy < 0){
-                            caseMinus();
-                        }
-                    }
-                }else{
-                    cir[k].x0 += dx;
-                    cir[k].y0 += dy;
-                }
-                break;
-        }
-    }
-    function draw(){
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        console.log(ctx);
-        move();
-        drawLine(0);
-        drawRect(0);
-        drawCir(0);
-    }
-
-    function mouseUpOut(event){
-        top_ind = 0;
-        top_type = "";
-        sel_size = [];
-        isDown=false;
-    }
-
-    function drawLine(check){
-        for(var i = 0; i < line.length; i++){
-            if(check == 1){
-                i = line.length - 1;
-            }
-            ctx.beginPath();
-            ctx.moveTo(line[i].x0, line[i].y0);
-            ctx.lineTo(line[i].x1, line[i].y1);
-            ctx.lineWidth = line[i].width;
-            ctx.strokeStyle = line[i].color;
-            ctx.stroke();
-        }
-    }
-    function drawRect(check){
-        for(var i = 0; i < rect.length; i++){
-            if(check == 1){
-                i = rect.length - 1;
-            }
-            ctx.lineWidth = rect[i].width;
-            ctx.strokeStyle = rect[i].color;
-            ctx.strokeRect(rect[i].x0, rect[i].y0, rect[i].x1, rect[i].y1);
-        }
-    }
-    function drawCir(check){
-        for(var i = 0; i < cir.length; i++){
-            if(check == 1){
-                i = cir.length - 1;
-            }
-            ctx.beginPath();
-            ctx.arc(cir[i].x0, cir[i].y0, cir[i].radius, cir[i].s_angle, cir[i].e_angle);
-            ctx.lineWidth = cir[i].width;
-            ctx.strokeStyle = cir[i].color;
-            ctx.stroke();
-        }
-    }
+    //        var aa = new PolySketch({
+    //            width:100,
+    //            height:100
+    //        });
+    //    var bb = new PolySketch({
+    //        width:120,
+    //        height:150
+    //    });
+    //
+    //    //console.log(aa.mouseEvent(event, bb).x);
+    //
+    //    bb.createPoly({len:3, color:"red"});
+    //    var c = bb.createPoly({x0: 20, y0: 20, x1:20, y1:20, len:5, color:"red", type:"rect"});
+    //    var d = bb.createPoly({x0: 40, y0: 40, x1:20, y1:20, len:5, color:"black", type:"rect"});
+    //    var a = bb.createPoly({x0: 70, y0: 70, x1:70, y1:100, len:5, color:"black", type:"line"});
+    //    var b = bb.createPoly({x0: 70, y0: 90, radius:40, len:5, color:"black", type:"cir"});
+    //    //console.log(c);
+    //    //c.draw();
+    //    //d.draw();
+    //
+    //    for(var i in bb.polyArray){
+    //        bb.polyArray[i].draw();
+    //    };
 </script>
 </body>
 </html>
+
