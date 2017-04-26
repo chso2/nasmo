@@ -9,6 +9,7 @@ videoSketch = function(construct){
     this.position = construct.position;
     this.url = construct.url;
     this.videoCanvas = true;
+    this.playCheck = false;
     this.init();
 };
 
@@ -24,7 +25,7 @@ videoSketch.prototype = {
         //this.vid.setAttribute("style", this.styleText);
         //requestAnimationFrame(this.updateCanvas);
         this.vid.style.display = "none";
-        this.vid.playsinline;
+        this.vid.setAttribute('playsinline', '');
     },
     updateCanvas: function (){
         var that = this;

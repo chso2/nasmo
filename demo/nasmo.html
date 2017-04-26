@@ -2,20 +2,24 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, width=device-width" />
     <title>Title</title>
     <style>
+        body{
+            margin:0px;
+        }
         .nasmo-wrap{
-
-            background-color:#323232;
+            text-align: center;
+            background-color:black;
             width:100%;
         }
         .player-wrap{
             display:inline-block;
         }
         .button-wrap{
+            margin-bottom:10px;
             display:inline-block;
-            vertical-align: top;
-            margin: 13px 13px 0px 0px;
+            padding-left:10px;
         }
         .player-wrap div{
             margin:10px 10px 0px 10px;
@@ -28,7 +32,7 @@
         }
         .control-div button{
             color:#55585e;
-            background-color:#323232;
+            background-color:black;
             font-size:20px;
             border:0px;
             margin-bottom:10px;
@@ -42,20 +46,25 @@
             text-align: center;
         }
         .button-wrap button{
-            width:40px;
-            height:40px;
-
+            width:36px;
+            height:36px;
+            background-color: #323232;
+            color:#dddddd;
+            border:0px;
+            border-radius: 6px;
+            opacity: 0.6;
         }
         #canvas{
             position:absolute;
             top:0px;
         }
         .color_btn{
-            margin-top:3px;
-            height:18px !important;
+            /*margin-top:3px;*/
+            /*height:18px !important;*/
             width:18px !important;
             border:0px;
             border-radius: 8px;
+
         }
         #red_btn{ background-color:red; }
         #yellow_btn{ background-color:yellow; }
@@ -97,10 +106,11 @@
             opacity: 0.0;
             /*margin: 10px 8px 30px 8px !important;*/
             background-color: #323232;
+            border-radius: 10px;
         }
     </style>
-    <script src="../js/nasmo.js"></script>
-    <script src="../js/canvasVideo.js"></script>
+    <script src="nasmo.js"></script>
+    <script src="canvasVideo.js"></script>
 </head>
 <body>
 <div class="nasmo-wrap">
@@ -123,17 +133,18 @@
             <button id="speed-btn">1 x</button>
         </div>
     </div>
+    <br>
     <div class="button-wrap">
-        <button id="line">line</button><br>
-        <button id="rect">rect</button><br>
-        <button id="cir">cir</button><br>
-        <button class="color_btn" id="red_btn"></button>
-        <button class="color_btn" id="yellow_btn"></button><br>
-        <button class="color_btn" id="blue_btn"></button>
-        <button class="color_btn" id="green_btn"></button><br>
-        <button id="stroke_size">size = 1</button><br>
-        <button id="undo">undo</button><br>
-        <button id="clear_canvas">clear</button><br>
+        <button id="line">line</button>
+        <button id="rect">rect</button>
+        <button id="cir">cir</button>
+        <button class="color_btn" id="red_btn">R</button>
+        <button class="color_btn" id="yellow_btn">Y</button>
+        <button class="color_btn" id="blue_btn">B</button>
+        <button class="color_btn" id="green_btn">G</button>
+        <button id="stroke_size">size1</button>
+        <button id="undo">undo</button>
+        <button id="clear_canvas">clear</button>
     </div>
 </div>
 
@@ -159,7 +170,7 @@
         }else{
             line_width++;
         }
-        this.textContent = "size = " + line_width;
+        this.textContent = "size" + line_width;
     });
 
     document.getElementById("red_btn").addEventListener("click", function(){stroke_style = "red";});
@@ -172,7 +183,8 @@
 
     video = new videoSketch({
         position:'canvas-wrap',
-        url:"http://fms.golfzon.com/mobile/new/2017/03/09/11/55/2070001_20170309115542.mp4"
+        url:"https://nasmothumbnail.golfzon.com/new/2017/04/04/11/59/2070001_20170404115932.mp4"
+//        url:"http://fms.golfzon.com/mobile/new/2017/03/09/11/55/2070001_20170309115542.mp4"
     });
 
     video.vid.oncanplay = function(){
@@ -182,30 +194,22 @@
                 width:video.vid.videoWidth,
                 height:video.vid.videoHeight,
                 styleText:'position:absolute; z-index:1; top:0px; left:0px;'});
+            flag = 1;
         }
         if(video.videoCanvas === true){
             video.updateCanvas();
         }
     };
     video.vid.onplay = function(){
+        video.playCheck = true;
         video.updateCanvas();
     }
-
-
-    //    video.vid.oncanplay = function(){
-    //        if(flag === 0){
-    //            canvas = new PolySketch({
-    //                position:'canvas-wrap',
-    //                width:video.vid.videoWidth,
-    //                height:video.vid.videoHeight,
-    //                styleText:'position:absolute; z-index:1; top:0px; left:0px;'});
-    //        }
-    //    };
 
     function play(){
         if(video.videoPlay()){
             p_btn.textContent = "PAUSE";
         }else{
+            video.playCheck = false;
             p_btn.textContent = "PLAY";
         }
     }

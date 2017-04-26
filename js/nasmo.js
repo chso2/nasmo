@@ -1,3 +1,6 @@
+/**
+ * Created by chso2 on 2017. 4. 14..
+ */
 PolySketch = function(construct){
     this.sketch = {
         canvas : null,
@@ -38,9 +41,6 @@ PolySketch.prototype = {
 
     init: function(){
         var that = this;
-        // var info = this.info;
-        // var self = this;
-        // var _ = this;
         var sketch = this.sketch;
         var point = this.point;
         sketch.canvas = document.createElement('canvas');
@@ -53,10 +53,29 @@ PolySketch.prototype = {
         point._screen = sketch.canvas.getBoundingClientRect();
         point._offsetX = point._screen.left;
         point._offsetY = point._screen.top;
+
+        var UserAgent = navigator.userAgent;
+
+        this.eventBind('touchstart', function(that){ return function(e){e.preventDefault(); that.touchStart(e,that);};}(that), true);
+        this.eventBind('touchmove', function(that){ return function(e){e.preventDefault(); that.touchMove(e,that);};}(that), true);
+        this.eventBind('touchend', function(that){ return function(e){e.preventDefault(); that.sketchUp(e,that);};}(that), true);
         this.eventBind('mousemove', function(that){ return function(e){e.preventDefault(); that.mouseMove(e,that);};}(that), true);
         this.eventBind('mousedown', function(that){ return function(e){e.preventDefault(); that.mouseDown(e,that);};}(that), true);
-        this.eventBind('mouseup', function(that){ return function(e){e.preventDefault(); that.mouseUpOut(e,that);};}(that), true);
-        this.eventBind('mouseout', function(that){ return function(e){e.preventDefault(); that.mouseUpOut(e,that);};}(that), true);
+        this.eventBind('mouseup', function(that){ return function(e){e.preventDefault(); that.sketchUp(e,that);};}(that), true);
+        this.eventBind('mouseout', function(that){ return function(e){e.preventDefault(); that.sketchUp(e,that);};}(that), true);
+
+
+        if(UserAgent.match(/iPhone|iPod|iPad|iPad2|Android|Windows CE|BlackBerry|Symbian|Windows Phone|webOS|Opera Mini|Opera Mobi|POLARIS|IEMobile|lgtelecom|nokia|SonyEricsson/i) != null || UserAgent.match(/LG|SAMSUNG|Samsung/) != null) {
+            this.eventUnbind('mousedown', function(that){ return function(e){that.mouseDown(e,that);};}(that));
+            this.eventUnbind('mousemove', function(that){ return function(e){that.mouseMove(e,that);};}(that));
+            this.eventUnbind('mouseup', function(that){ return function(e){that.mousketchUp(e,that);};}(that));
+            this.eventUnbind('mouseout', function(that){ return function(e){that.mousketchUp(e,that);};}(that));
+        }else{
+            this.eventUnbind('touchstart', function(that){ return function(e){that.touchStart(e,that);};}(that));
+            this.eventUnbind('touchmove', function(that){ return function(e){that.touchMove(e,that);};}(that));
+            this.eventUnbind('touchend', function(that){ return function(e){that.sketchUp(e,that);};}(that));
+        }
+
 
         window.addEventListener('locationchanged', function(){
             //
@@ -73,25 +92,53 @@ PolySketch.prototype = {
         this.y = e.clientY - that.point._offsetY;
         this.target = e.target;
     },
+    touchEvent: function(obj) {
+        var curLeft = curTop = 0;
+        if(obj.offsetParent) {
+            do {
+                curLeft += obj.offsetLeft;
+                curTop += obj.offsetTop;
+            } while(obj = obj.offsetParent);
+        } else {
+            curLeft = obj.offsetLeft;
+            curTop = obj.offsetTop;
+        }
+        return [curLeft,curTop];
+    },
+
+
     mouseDown: function(e, that, callback){
+        this.engine = that;
+        e = new this.engine.mouseEvent(e, this.engine);
+        this.point._mouseX = e.x;
+        this.point._startX = e.x;
+        this.point._mouseY = e.y;
+        this.point._startY = e.y;
+        this.point._isDown = true;
+        this.sketchDown();
+    },
+    touchStart: function(e, that, callback){
+        this.engine = that;
+        var pos = this.touchEvent(this.sketch.canvas);
+        var touch = e.touches[0];
+        this.point._mouseX = touch.pageX - pos[0];
+        this.point._mouseY = touch.pageY - pos[1];
+        this.point._startX = touch.pageX - pos[0];
+        this.point._startY = touch.pageY - pos[1];
+        this.point._isDown = true;
+        this.engine.near(this);
+        this.sketchDown();
+    },
+    sketchDown: function(){
         var sketch = this.sketch;
         var point = this.point;
         var temp = this.temp;
-        this.engine = that;
-
-        e = new this.engine.mouseEvent(e, this.engine);
-        point._mouseX = e.x;
-        point._startX = e.x;
-        point._mouseY = e.y;
-        point._startY = e.y;
-        point._isDown = true;
 
         if(point._mouseY > sketch.canvas.height - 20){
             window.document.getElementById("seeker").style.transform = "scale(" + point._mouseX / sketch.canvasWidth + ", 1)";
             window.video.vid.currentTime = (point._mouseX / sketch.canvasWidth) * window.video.vid.duration;
             /*  재생시간 / 비디오의 전체시간 만큼 translate -> width의 비율로 */
         }
-
         if(this.thumbnailCheck == false){
             for(var j = 1; j < 5; j++){
                 sketch.ctx.beginPath();
@@ -101,8 +148,6 @@ PolySketch.prototype = {
                 }
             }
         }
-
-
         if(temp.cir.length > 0){
             for(var i in temp.cir){
                 if(i > 0){
@@ -110,7 +155,6 @@ PolySketch.prototype = {
                     sketch.ctx.rect(temp.cir[i].x - temp.cir[i].radius, temp.cir[i].y - temp.cir[i].radius,
                         temp.cir[i].radius * 2, temp.cir[i].radius * 2);
                     if(sketch.ctx.isPointInPath(point._mouseX, point._mouseY) == true){
-                        alert("gg");
                         point._point = i;
                     }
                 }
@@ -118,12 +162,25 @@ PolySketch.prototype = {
         }
         (function callback(){ }());
     },
+    touchMove: function(e, that, callback){
+        this.engine = that;
+        var pos = this.touchEvent(this.sketch.canvas);
+        var touch = e.touches[0];
+        this.point._mouseX = touch.pageX - pos[0];
+        this.point._mouseY = touch.pageY - pos[1];
+        this.sketchDrag(e, that, callback);
+    },
     mouseMove: function(e, that, callback){
-        var point = this.point;
         this.engine = that;
         e = new this.engine.mouseEvent(e, this.engine);
-        point._mouseX = e.x;
-        point._mouseY = e.y;
+        this.point._mouseX = e.x;
+        this.point._mouseY = e.y;
+        this.sketchDrag(e, that, callback);
+    },
+    sketchDrag: function(e, that, callback){
+        var sketch = this.sketch;
+        var point = this.point;
+        this.engine = that;
 
         var list = document.getElementsByClassName("thumbnail");
 
@@ -156,8 +213,6 @@ PolySketch.prototype = {
             }, 50);
         }
 
-
-
         if(!point._isDown){
             this.engine.near(this);
         }else{
@@ -177,15 +232,23 @@ PolySketch.prototype = {
                 }else{
                     this.getPoly().reSize(this, point._point);
                 }
+            }else if(point._mouseY > sketch.canvas.height - 20){
+                window.document.getElementById("seeker").style.transform = "scale(" + point._mouseX / sketch.canvasWidth + ", 1)";
+                window.video.vid.currentTime = (point._mouseX / sketch.canvasWidth) * window.video.vid.duration;
+                window.video.vid.pause();
             }
         }
         (function callback(){ }());
     },
-    mouseUpOut:function (e, that, callback) {
+    sketchUp: function(e, that, callback){
         this.nearest.ind = 0;
         this.point._isDown = false;
         this.point._isDownEnter = false;
         this.point._point = 0;
+        (function callback(){ }());
+        if(window.video.playCheck === true){
+            window.video.vid.play();
+        }
     },
     clearCanvas:function(){
         this.sketch.ctx.clearRect(0, 0, this.sketch.canvas.width, this.sketch.canvas.height);
@@ -339,15 +402,16 @@ PolySketch.prototype = {
                 this.sketch.ctx.setLineDash([0,0]);
                 break;
         }
-        temp.cir.push({x:x, y:y, radius:4});
-        temp.cir.push({x:x1, y:y1, radius:4});
-        temp.cir.push({x:x2, y:y2, radius:4});
-        temp.cir.push({x:x3, y:y3, radius:4});
-        temp.cir.push({x:x4, y:y4, radius:4});
+        temp.cir.push({x:x, y:y, radius:7});
+        temp.cir.push({x:x1, y:y1, radius:7});
+        temp.cir.push({x:x2, y:y2, radius:7});
+        temp.cir.push({x:x3, y:y3, radius:7});
+        temp.cir.push({x:x4, y:y4, radius:7});
         for(var i in temp.cir){
             this.sketch.ctx.beginPath();
             this.sketch.ctx.arc(temp.cir[i].x, temp.cir[i].y, temp.cir[i].radius, 0, 2 * Math.PI);
-            this.sketch.ctx.fillStyle = "#dddddd";
+            this.sketch.ctx.fillStyle = "deepskyblue";
+            this.sketch.ctx.globalAlpha = 0.5;
             this.sketch.ctx.fill();
         }
     }
@@ -379,49 +443,49 @@ Poly.prototype = {
 
         switch (this.type){
             case "line":
-                    if(point == 1){
-                        this.x0 = that._mouseX;
-                        this.y0 = that._mouseY;
-                    }else if(point == 2){
-                        this.x1 = that._mouseX;
-                        this.y1 = that._mouseY;
-                    }
+                if(point == 1){
+                    this.x0 = that._mouseX;
+                    this.y0 = that._mouseY;
+                }else if(point == 2){
+                    this.x1 = that._mouseX;
+                    this.y1 = that._mouseY;
+                }
                 break;
             case "rect":
-                    if(point == 1){
-                        this.x0 = that._mouseX;
-                        this.y0 = that._mouseY;
-                        this.x1 -= dx;
-                        this.y1 -= dy;
-                    }else if(point == 2){
-                        this.y0 = that._mouseY;
-                        this.x1 += dx;
-                        this.y1 -= dy;
-                    }else if(point == 3){
-                        this.x0 = that._mouseX;
-                        this.x1 -= dx;
-                        this.y1 += dy;
-                    }else if(point == 4){
-                        this.x1 += dx;
-                        this.y1 += dy;
-                    }
+                if(point == 1){
+                    this.x0 = that._mouseX;
+                    this.y0 = that._mouseY;
+                    this.x1 -= dx;
+                    this.y1 -= dy;
+                }else if(point == 2){
+                    this.y0 = that._mouseY;
+                    this.x1 += dx;
+                    this.y1 -= dy;
+                }else if(point == 3){
+                    this.x0 = that._mouseX;
+                    this.x1 -= dx;
+                    this.y1 += dy;
+                }else if(point == 4){
+                    this.x1 += dx;
+                    this.y1 += dy;
+                }
                 break;
             case "cir":
-                        if((point == 1 && dx < 0 && dy < 0) ||
-                            (point == 2 && dx > 0 && dy < 0) ||
-                            (point == 3 && dx < 0 && dy > 0) ||
-                            (point == 4 && dx > 0 && dy > 0)){
-                            this.x0 += dx;
-                            this.y0 += dy;
-                            this.radius += Math.sqrt(dx * dx + dy * dy);
-                        }else if((point == 1 && dx > 0 && dy > 0) ||
-                            (point == 2 && dx < 0 && dy > 0) ||
-                            (point == 3 && dx > 0 && dy < 0) ||
-                            (point == 4 && dx < 0 && dy < 0)){
-                            this.x0 += dx;
-                            this.y0 += dy;
-                            this.radius -= Math.sqrt(dx * dx + dy * dy);
-                        }
+                if((point == 1 && dx < 0 && dy < 0) ||
+                    (point == 2 && dx > 0 && dy < 0) ||
+                    (point == 3 && dx < 0 && dy > 0) ||
+                    (point == 4 && dx > 0 && dy > 0)){
+                    this.x0 += dx;
+                    this.y0 += dy;
+                    this.radius += Math.sqrt(dx * dx + dy * dy);
+                }else if((point == 1 && dx > 0 && dy > 0) ||
+                    (point == 2 && dx < 0 && dy > 0) ||
+                    (point == 3 && dx > 0 && dy < 0) ||
+                    (point == 4 && dx < 0 && dy < 0)){
+                    this.x0 += dx;
+                    this.y0 += dy;
+                    this.radius -= Math.sqrt(dx * dx + dy * dy);
+                }
                 break;
         }
         self.reDraw();
@@ -434,6 +498,7 @@ Poly.prototype = {
             this.y1 += dy;
         }
         that.reDraw();
+        that.drawTemp();
     },
     draw:function(){;
         var ctx = this.engine.sketch.ctx;
