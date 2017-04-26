@@ -11,9 +11,6 @@ PolySketch = function(construct){
         position : construct.position
     };
     this.point = {
-        _screen : null,
-        _offsetX : null,
-        _offsetY : null,
         _mouseX : null,
         _mouseY : null,
         _isDown : false,
@@ -50,10 +47,6 @@ PolySketch.prototype = {
         document.getElementById(sketch.position).appendChild(sketch.canvas);
         sketch.canvas.setAttribute("style", sketch.styleText);
 
-        point._screen = sketch.canvas.getBoundingClientRect();
-        point._offsetX = point._screen.left;
-        point._offsetY = point._screen.top;
-
         var UserAgent = navigator.userAgent;
 
         this.eventBind('touchstart', function(that){ return function(e){e.preventDefault(); that.touchStart(e,that);};}(that), true);
@@ -88,8 +81,8 @@ PolySketch.prototype = {
         this.sketch.canvas.removeEventListener(type, callback, false);
     },
     mouseEvent:function(e, that){
-        this.x = e.clientX - that.point._offsetX;
-        this.y = e.clientY - that.point._offsetY;
+        this.x = e.offsetX;
+        this.y = e.offsetY;
         this.target = e.target;
     },
     touchEvent: function(obj) {
@@ -137,6 +130,7 @@ PolySketch.prototype = {
         if(point._mouseY > sketch.canvas.height - 20){
             window.document.getElementById("seeker").style.transform = "scale(" + point._mouseX / sketch.canvasWidth + ", 1)";
             window.video.vid.currentTime = (point._mouseX / sketch.canvasWidth) * window.video.vid.duration;
+
             /*  재생시간 / 비디오의 전체시간 만큼 translate -> width의 비율로 */
         }
         if(this.thumbnailCheck == false){
@@ -182,6 +176,7 @@ PolySketch.prototype = {
         var point = this.point;
         this.engine = that;
 
+        // console.log(point._mouseX);
         var list = document.getElementsByClassName("thumbnail");
 
         /* fade in */
@@ -268,6 +263,7 @@ PolySketch.prototype = {
             var h_rate = 10;
             var dx = polyArray[i].x1 - polyArray[i].x0;
             var dy = polyArray[i].y1 - polyArray[i].y0;
+
             switch (polyArray[i].type){
                 case "line":
                     // var slope = - Math.atan2(dx, dy);                               //기울기
